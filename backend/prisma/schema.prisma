@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  LANDLORD
+  TENANT
+}
+
+enum EmploymentStatus {
+  EMPLOYED
+  SELF_EMPLOYED
+  UNEMPLOYED
+  STUDENT
+  RETIRED
+}
+
+enum AccommodationType {
+  STUDIO
+  ONE_BEDROOM
+  TWO_BEDROOM
+  THREE_BEDROOM
+  MINI_FLAT
+  SELF_CONTAINED
+  DUPLEX
+}
+
+enum ApplicationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  propertiesAsLandlord     Property[]                    @relation("LandlordProperties")
+  applicationsAsLandlord   ProspectiveTenantApplication[] @relation("LandlordApplications")
+  leaseAgreementsAsTenant  LeaseAgreement[]              @relation("TenantLeaseAgreements")
+  paymentsAsTenant         Payment[]                     @relation("TenantPayments")
+  complaintsAsTenant       Complaint[]                   @relation("TenantComplaints")
+
+  @@map("users")
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  propertyType String
+  bedrooms    Int
+  bathrooms   Int
+  rent        Decimal
+  description String?
+  isAvailable Boolean  @default(true)
+  landlordId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  landlord        User              @relation("LandlordProperties", fields: [landlordId], references: [id])
+  leaseAgreements LeaseAgreement[]
+  payments        Payment[]
+  complaints      Complaint[]
+
+  @@map("properties")
+}
+
+model ProspectiveTenantApplication {
+  id                        String             @id @default(cuid())
+  applicantEmail            String             @unique
+  applicantName             String
+  phoneNumber               String
+  dateOfBirth               DateTime
+  employmentStatus          EmploymentStatus
+  employerName              String?
+  familySize                Int
+  desiredAccommodationType  AccommodationType
+  previousAddress           String
+  reasonForLeaving          String
+  yearlyRentCapacity        Decimal
+  applicationStatus         ApplicationStatus  @default(PENDING)
+  submittedAt               DateTime           @default(now())
+  reviewedAt                DateTime?
+  reviewedBy                String?
+  reviewNotes               String?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  // Relations
+  landlord User? @relation("LandlordApplications", fields: [reviewedBy], references: [id])
+
+  @@map("prospective_tenant_applications")
+}
+
+model LeaseAgreement {
+  id          String    @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  rent        Decimal
+  deposit     Decimal?
+  terms       String?
+  isActive    Boolean   @default(true)
+  propertyId  String
+  tenantId    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  property Property @relation(fields: [propertyId], references: [id])
+  tenant   User     @relation("TenantLeaseAgreements", fields: [tenantId], references: [id])
+  payments Payment[]
+
+  @@map("lease_agreements")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  amount          Decimal
+  dueDate         DateTime
+  paidDate        DateTime?
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  reference       String?
+  notes           String?
+  propertyId      String
+  tenantId        String
+  leaseAgreementId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  property      Property      @relation(fields: [propertyId], references: [id])
+  tenant        User          @relation("TenantPayments", fields: [tenantId], references: [id])
+  leaseAgreement LeaseAgreement @relation(fields: [leaseAgreementId], references: [id])
+
+  @@map("payments")
+}
+
+model Complaint {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  status      ComplaintStatus @default(OPEN)
+  priority    String?         @default("MEDIUM")
+  response    String?
+  resolvedAt  DateTime?
+  propertyId  String
+  tenantId    String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  property Property @relation(fields: [propertyId], references: [id])
+  tenant   User     @relation("TenantComplaints", fields: [tenantId], references: [id])
+
+  @@map("complaints")
+}
