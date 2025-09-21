@@ -44,6 +44,7 @@ export const authAPI = {
   login: (data: LoginRequest) => api.post('/auth/login', data),
   refreshToken: (refreshToken: string) => api.post('/auth/refresh', { refreshToken }),
   getMe: () => api.get('/auth/me'),
+  checkEmailAvailability: (email: string) => api.get(`/auth/check-email?email=${encodeURIComponent(email)}`),
 };
 
 export const applicationAPI = {
