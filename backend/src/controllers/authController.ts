@@ -191,6 +191,52 @@ export const getMe = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// @desc    Check email availability
+// @route   GET /api/auth/check-email
+// @access  Public
+export const checkEmailAvailability = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Email parameter is required'
+      } as ApiResponse);
+    }
+
+    // Check if email exists in users table
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    // Check if email exists in applications table
+    const existingApplication = await prisma.prospectiveTenantApplication.findUnique({
+      where: { applicantEmail: email }
+    });
+
+    const isAvailable = !existingUser && !existingApplication;
+
+    return res.json({
+      success: true,
+      data: {
+        email,
+        available: isAvailable,
+        message: isAvailable 
+          ? 'Email is available' 
+          : 'Email is already registered or used in an application'
+      }
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Check email availability error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while checking email availability'
+    } as ApiResponse);
+  }
+};
+
 // @desc    Refresh access token
 // @route   POST /api/auth/refresh
 // @access  Public
