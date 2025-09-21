@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
-import { body } from 'express-validator';
-import { register, login, getMe, refreshToken } from '../controllers/authController';
+import { body, query } from 'express-validator';
+import { register, login, getMe, refreshToken, checkEmailAvailability } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
 
@@ -34,6 +34,14 @@ router.post('/refresh', [
   body('refreshToken').notEmpty(),
   validateRequest
 ], refreshToken);
+
+// @route   GET /api/auth/check-email
+// @desc    Check email availability
+// @access  Public
+router.get('/check-email', [
+  query('email').isEmail().normalizeEmail(),
+  validateRequest
+], checkEmailAvailability);
 
 // @route   GET /api/auth/me
 // @desc    Get current user
